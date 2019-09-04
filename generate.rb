@@ -1,26 +1,74 @@
 require 'pry'
 require 'csv'
 require 'json'
+require 'set'
 require 'yaml'
 require 'open-uri'
 require_relative 'generate/data'
 require_relative 'generate/utilities'
 
-thailand =  {}
-changwats =  {}
-amphoes   =  {}
-tambons   =  {}
+thailand = {}
+provinces = {
+  data: Set[]
+}
+districts = {
+  data: Set[]
+}
+subDistricts = {
+  data: Set[]
+}
 
-tambons_data.each do |row|
+districts_data.each do |row|
+  provice_id = row[7].to_i
+  district_id = row[4].to_i
+  subDistrict_id = row[1].to_i
+
+  province = {
+    id: provice_id,
+    name: {
+      th: row[8].gsub(/จ\./, '').strip,
+      en: row[9]
+    }
+  }
+  provinces[:data].add?(province)
+
+  district = {
+    id: district_id,
+    name: {
+      th: row[5].gsub(/อ\.|เขต/, '').strip,
+      en: row[6]
+    },
+    provice_id: provice_id
+  }
+  districts[:data].add?(district)
+
+  subDistrict = {
+    id: subDistrict_id,
+    name: {
+      th: row[2].gsub(/ต\.|แขวง/, '').strip,
+      en: row[3]
+    },
+    coordinates: {
+      lat: row[10].to_f,
+      lng: row[11].to_f
+    },
+    zipcode: zip_code_data[row[1].to_i],
+    provice_id: provice_id,
+    district_id: district_id
+  }
+  subDistricts[:data].add?(subDistrict)
+end
+
+def combine_json(row)
   if thailand[row[7]].nil?
     thailand[row[7]] = {
       name: {
         th: row[8].gsub(/จ\./, '').strip,
         en: row[9]
       },
-      amphoes: {}
+      districts: {}
     }
-    changwats[row[7]] = {
+    provinces[row[7]] = {
       name: {
         th: row[8].gsub(/จ\./, '').strip,
         en: row[9]
@@ -28,15 +76,15 @@ tambons_data.each do |row|
     }
   end
 
-  if thailand[row[7]][:amphoes][row[4]].nil?
-    thailand[row[7]][:amphoes][row[4]] = {
+  if thailand[row[7]][:districts][row[4]].nil?
+    thailand[row[7]][:districts][row[4]] = {
       name: {
         th: row[5].gsub(/อ\.|เขต/, '').strip,
         en: row[6]
       },
-      tambons: {}
+      subDistricts: {}
     }
-    amphoes[row[4]] = {
+    districts[row[4]] = {
       name: {
         th: row[5].gsub(/อ\.|เขต/, '').strip,
         en: row[6]
@@ -45,7 +93,7 @@ tambons_data.each do |row|
     }
   end
 
-  thailand[row[7]][:amphoes][row[4]][:tambons][row[1]] = {
+  thailand[row[7]][:districts][row[4]][:subDistricts][row[1]] = {
     name: {
       th: row[2].gsub(/ต\.|แขวง/, '').strip,
       en: row[3]
@@ -56,7 +104,7 @@ tambons_data.each do |row|
     },
     zipcode: zip_code_data[row[1].to_i]
   }
-  tambons[row[1]] = {
+  subDistricts[row[1]] = {
     name: {
       th: row[2].gsub(/ต\.|แขวง/, '').strip,
       en: row[3]
@@ -72,16 +120,16 @@ tambons_data.each do |row|
 end
 
 thailand.each do |id, c|
-  c[:amphoes].each do |id, a|
-    a[:tambons] = sort_by_to_h(a[:tambons])
+  c[:districts].each do |id, a|
+    a[:subDistricts] = sort_by_to_h(a[:subDistricts])
   end
-  c[:amphoes] = sort_by_to_h(c[:amphoes])
+  c[:districts] = sort_by_to_h(c[:districts])
 end
 
 thailand = sort_by_to_h(thailand)
 
-output_to_dist(thailand, 'thailand')
-output_to_dist(changwats, 'changwats')
-output_to_dist(amphoes, 'amphoes')
-output_to_dist(tambons, 'tambons')
+# output_to_dist(thailand, 'thailand')
+output_to_dist(provinces, 'provinces')
+output_to_dist(districts, 'districts')
+output_to_dist(subDistricts, 'subDistricts')
 

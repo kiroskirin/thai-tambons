@@ -12,6 +12,6 @@ def zip_code_data
     end.reduce(&:merge)
 end
 
-def tambons_data
+def districts_data
   CSV.read(DGA_FILE, headers:true)
 end
